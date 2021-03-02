@@ -45,7 +45,7 @@ class TripletDataset(Dataset):
         Example:
 
             >>> from glob import glob
-            >>> train_path = sorted(glob("/kaggle/input/hackathon-isae-2021-patch-retrieval/Train/Train/*.png"))
+            >>> train_path = sorted(glob("/kaggle/input/hackathon-isae-2021-patch-retrieval/Train/*.png"))
             >>> dataset = TripletDataset(list_path=train_path)
 
         References:

@@ -29,6 +29,7 @@ class TripletDataset(Dataset):
     def __init__(
             self,
             list_path: List[str],
+            proba_augment: float = 0,
             isTest: bool = False,
             transform_anchor: Optional[Callable] = None,
             transform_positive: Optional[Callable] = None,
@@ -54,6 +55,7 @@ class TripletDataset(Dataset):
         """
         self.list_path = list_path
         self.isTest = isTest
+        self.proba_augment = proba_augment
 
         if transform_anchor is None:
             self.transform_anchor = transforms.ToTensor()
@@ -124,9 +126,15 @@ class TripletDataset(Dataset):
         negative_image: Image.Image = Image.open(negative_path)
 
         # Apply transformations
-        anchor_tensor: torch.Tensor = self.transform_anchor(anchor_image)
-        positive_tensor: torch.Tensor = self.transform_positive(positive_image)
-        negative_tensor: torch.Tensor = self.transform_negative(negative_image)
+        if random.random()<self.proba_augment:  
+            anchor_tensor: torch.Tensor = self.transform_anchor(anchor_image)
+        else:anchor_tensor = transforms.ToTensor()(anchor_image)
+        if random.random()<self.proba_augment:  
+            positive_tensor: torch.Tensor = self.transform_positive(positive_image)
+        else:positive_tensor = transforms.ToTensor()(positive_image)
+        if random.random()<self.proba_augment:  
+            negative_tensor: torch.Tensor = self.transform_negative(negative_image)
+        else:negative_tensor = transforms.ToTensor()(negative_image)
 
         return (anchor_tensor, positive_tensor, negative_tensor), []
 
@@ -156,13 +164,6 @@ class TripletDataset(Dataset):
             return test_tensor
 
 
-# An identity layer to pass the fc layer in resnet
-class Identity(nn.Module):
-    def __init__(self):
-        super(Identity, self).__init__()
-
-    def forward(self, x):
-        return x
 class TripletNet(nn.Module):
     def __init__(self, embedding_net):
         super(TripletNet, self).__init__()
@@ -196,7 +197,6 @@ class MetricResnet(nn.Module):
 
 # Define model
 resnet18 = models.resnet18(pretrained=True)
-resnet18.fc = Identity()
 
 
 # Freeze all the parameters in the model
@@ -217,7 +217,13 @@ print(len(train_path))
 train = [train_path[i] for i in range(40000) if i % 8 < 6]
 test = [train_path[i] for i in range(40000) if i % 8 >= 6]
 print(test[0:30])
-triplet_train_dataset = TripletDataset(list_path=train, isTest=False)
+
+contrast_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.ColorJitter(contrast=1),
+])
+
+triplet_train_dataset = TripletDataset(list_path=train, proba_augment=0.5, isTest=False, transform_anchor=contrast_transform, transform_positive=contrast_transform, transform_negative=contrast_transform)
 triplet_test_dataset = TripletDataset(list_path=test, isTest=True)
 print (len(test), len(train))
 
@@ -248,14 +254,14 @@ model = TripletNet(embedding_net)
 if cuda:
     model.cuda()
 loss_fn = TripletLoss(margin)
-lr = 3.5e-5
+lr = 1e-4 
 optimizer = optim.Adam(model.parameters(), lr=lr)
 scheduler = lr_scheduler.StepLR(optimizer, 8, gamma=0.1, last_epoch=-1)
-n_epochs = 20
+n_epochs = 10
 log_interval = 50
 
 from DeepHash.trainer import fit
 fit(triplet_train_loader, triplet_test_loader, model, loss_fn, optimizer, scheduler, n_epochs, cuda, log_interval)
 
-torch.save(model.embedding_net,'normalized_20ep_margin2_lr3.5-5_batch128_workers8.pt')
+torch.save(model.embedding_net,'aug05contrast1_10ep_m2_lr-4_batch128_w8.pt')
 

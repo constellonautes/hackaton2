@@ -232,8 +232,8 @@ if cuda: print("cuda")
 else: print("no cuda")
 """triplet_train_dataset = TripletDataset(image_dataset['train']) # Returns triplets of images
 triplet_test_dataset = TripletCifar1(image_dataset['test'])"""
-batch_size = 32
-kwargs = {'num_workers':2, 'pin_memory': True} if cuda else {}
+batch_size = 128
+kwargs = {'num_workers':8, 'pin_memory': True} if cuda else {}
 triplet_train_loader = torch.utils.data.DataLoader(triplet_train_dataset, batch_size=batch_size, shuffle=False, **kwargs)
 triplet_test_loader = torch.utils.data.DataLoader(triplet_test_dataset, batch_size=batch_size, shuffle=False, **kwargs)
 
@@ -251,11 +251,11 @@ loss_fn = TripletLoss(margin)
 lr = 1e-3
 optimizer = optim.Adam(model.parameters(), lr=lr)
 scheduler = lr_scheduler.StepLR(optimizer, 8, gamma=0.1, last_epoch=-1)
-n_epochs = 10
+n_epochs = 20
 log_interval = 50
 
 from DeepHash.trainer import fit
 fit(triplet_train_loader, triplet_test_loader, model, loss_fn, optimizer, scheduler, n_epochs, cuda, log_interval)
 
-torch.save(model.embedding_net,'normalized_10ep_margin2_lr-3_batch32.pt')
+torch.save(model.embedding_net,'normalized_20ep_margin2_lr-3_batch128_workers8.pt')
 

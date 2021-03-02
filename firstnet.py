@@ -210,7 +210,7 @@ def freeze_model(model):
 
 ### LOAD TRAIN DATA
 
-train_path = sorted(glob("Train/Train/*.png"))
+train_path = sorted(glob("Train/*.png"))
 print("""HEEEEEEY""")
 print(len(train_path))
 # The two last images of each timeseries is set as part of the test dataset.

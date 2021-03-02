@@ -210,8 +210,8 @@ def freeze_model(model):
 
 ### LOAD TRAIN DATA
 
-train_path = sorted(glob("/content/Train/Train/*.png"))
-
+train_path = sorted(glob("Train/Train/*.png"))
+print("""HEEEEEEY""")
 print(len(train_path))
 # The two last images of each timeseries is set as part of the test dataset.
 train = [train_path[i] for i in range(40000) if i % 8 < 6]
@@ -225,8 +225,7 @@ print (len(test), len(train))
 ### SELECT CUDA
 cuda = torch.cuda.is_available()
 
-res18 = resnet18(pretrained=True)
-model_input = torch.nn.Sequential(torch.nn.Sequential(*list(res18.children())[:-2]))
+model_input = torch.nn.Sequential(torch.nn.Sequential(*list(resnet18.children())[:-2]))
 
 cuda = torch.cuda.is_available()
 if cuda: print("cuda")

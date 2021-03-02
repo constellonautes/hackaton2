@@ -196,9 +196,6 @@ class MetricResnet(nn.Module):
         x = F.normalize(x, p=2, dim=1)
         return x
 
-# Define model
-
-model = torch.hub.load('pytorch/vision:v0.6.0', 'inception_v3', pretrained=True)
 
 
 # Freeze all the parameters in the model
@@ -212,7 +209,7 @@ def freeze_model(model):
 
 ### LOAD TRAIN DATA
 
-train_path = sorted(glob("Train/*.png"))
+train_path = sorted(glob("Train/Train/*.png"))
 print("""HEEEEEEY""")
 print(len(train_path))
 # The two last images of each timeseries is set as part of the test dataset.
@@ -220,7 +217,7 @@ train = [train_path[i] for i in range(40000) if i % 8 < 6]
 test = [train_path[i] for i in range(40000) if i % 8 >= 6]
 print(test[0:30])
 
-##Preprocess the data for dimension purposes
+##Preprocess the data
 preprocess = transforms.Compose([
     transforms.Resize(299),
     transforms.CenterCrop(299),
@@ -239,7 +236,10 @@ print (len(test), len(train))
 
 ### SELECT CUDA
 cuda = torch.cuda.is_available()
-model_input=model
+
+# Define model
+
+model_input = torch.hub.load('pytorch/vision:v0.6.0', 'inception_v3', pretrained=True)
 #model_input = torch.nn.Sequential(torch.nn.Sequential(*list(model.children())[:-2]))
 
 cuda = torch.cuda.is_available()
@@ -247,30 +247,31 @@ if cuda: print("cuda")
 else: print("no cuda")
 """triplet_train_dataset = TripletDataset(image_dataset['train']) # Returns triplets of images
 triplet_test_dataset = TripletCifar1(image_dataset['test'])"""
-batch_size = 128
+batch_size = 32
 kwargs = {'num_workers':8, 'pin_memory': True} if cuda else {}
 triplet_train_loader = torch.utils.data.DataLoader(triplet_train_dataset, batch_size=batch_size, shuffle=False, **kwargs)
 triplet_test_loader = torch.utils.data.DataLoader(triplet_test_dataset, batch_size=batch_size, shuffle=False, **kwargs)
 
 # Set up the network and training parameters
 #from DeepHash.networks import EmbeddingNet, TripletNet
-from DeepHash.losses import TripletLoss
+from DeepHash.losses import TripletLossInception
 
 margin = 2.
-embedding_net =model
+embedding_net =model_input
 #embedding_net = MetricResnet(model_input)
 #embedding_net = resnet18
 model = TripletNet(embedding_net)
 if cuda:
     model.cuda()
-loss_fn = TripletLoss(margin)
-lr = 1e-3
+loss_fn = TripletLossInception(margin)
+lr = 1e-4
 optimizer = optim.Adam(model.parameters(), lr=lr)
 scheduler = lr_scheduler.StepLR(optimizer, 8, gamma=0.1, last_epoch=-1)
-n_epochs = 20
+n_epochs = 3
 log_interval = 50
 
 from DeepHash.trainer import fit
 fit(triplet_train_loader, triplet_test_loader, model, loss_fn, optimizer, scheduler, n_epochs, cuda, log_interval)
 
-torch.save(model.embedding_net,'normalized_20ep_margin2_lr-3_batch128_workers8.pt')
+torch.save(model.embedding_net,'inception_20ep_margin2_lr-4_batch32_workers8.pt')
+

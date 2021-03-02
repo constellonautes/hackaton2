@@ -248,14 +248,14 @@ model = TripletNet(embedding_net)
 if cuda:
     model.cuda()
 loss_fn = TripletLoss(margin)
-lr = 1e-4
+lr = 3.5e-5
 optimizer = optim.Adam(model.parameters(), lr=lr)
 scheduler = lr_scheduler.StepLR(optimizer, 8, gamma=0.1, last_epoch=-1)
-n_epochs = 9
+n_epochs = 20
 log_interval = 50
 
 from DeepHash.trainer import fit
 fit(triplet_train_loader, triplet_test_loader, model, loss_fn, optimizer, scheduler, n_epochs, cuda, log_interval)
 
-torch.save(model.embedding_net,'normalized_9ep_margin2_lr-4_batch128_workers8.pt')
+torch.save(model.embedding_net,'normalized_20ep_margin2_lr3.5-5_batch128_workers8.pt')
 

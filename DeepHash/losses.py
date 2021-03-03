@@ -31,10 +31,12 @@ class TripletLoss(nn.Module):
         super(TripletLoss, self).__init__()
         self.margin = margin
 
-    def forward(self, anchor, positive, negative, size_average=True):
+    def forward(self, anchor, positive, negative1, negative2, negative3, size_average=True):
         distance_positive = (anchor - positive).pow(2).sum(1)  # .pow(.5)
-        distance_negative = (anchor - negative).pow(2).sum(1)  # .pow(.5)
-        losses = F.relu(distance_positive - distance_negative + self.margin)
+        distance_negative1 = (anchor - negative1).pow(2).sum(1)  # .pow(.5)
+        distance_negative2 = (anchor - negative2).pow(2).sum(1)
+        distance_negative3 = (anchor - negative3).pow(2).sum(1)
+        losses = F.relu(distance_positive - 0.33*distance_negative1 - 0.33*distance_negative2 - 0.33*distance_negative3 + self.margin)
         return losses.mean() if size_average else losses.sum()
 
 class TripletLossInception(nn.Module):

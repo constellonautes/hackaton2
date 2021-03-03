@@ -107,23 +107,40 @@ class TripletDataset(Dataset):
 
         # Negative part
         # Select a patch from a different time series
-        negative_time_series_number: int = random.randint(
+        negative_time_series_number1: int = random.randint(
             0, 4999
         )  # We have 5000 time series
-        while negative_time_series_number == anchor_time_series_number:
-            negative_time_series_number: int = random.randint(0, 4999)
+        negative_time_series_number2: int = random.randint(0,4999)
+        negative_time_series_number3: int = random.randint(0,4999)
+        while negative_time_series_number1 == anchor_time_series_number:
+            negative_time_series_number1: int = random.randint(0, 4999)
 
-        negative_image_number: int = random.randint(0, 7)
+        negative_image_number1: int = random.randint(0, 7)
+        negative_image_number2: int = random.randint(0, 7)
+        negative_image_number3: int=  random.randint(0,7)
 
-        negative_path = self.__edit_path(
+        negative_path1 = self.__edit_path(
             path=anchor_path,
-            time_series_number=negative_time_series_number,
-            image_number=negative_image_number,
+            time_series_number=negative_time_series_number1,
+            image_number=negative_image_number1,
+        )
+        negative_path2 = self.__edit_path(
+            path=anchor_path,
+            time_series_number=negative_time_series_number2,
+            image_number=negative_image_number2,
+        )
+        negative_path3 = self.__edit_path(
+            path=anchor_path,
+            time_series_number=negative_time_series_number3,
+            image_number=negative_image_number3,
         )
 
         anchor_image: Image.Image = Image.open(anchor_path)
         positive_image: Image.Image = Image.open(positive_path)
-        negative_image: Image.Image = Image.open(negative_path)
+        negative_image1: Image.Image = Image.open(negative_path1)
+        negative_image2: Image.Image = Image.open(negative_path2)
+        negative_image3: Image.Image = Image.open(negative_path3)
+
 
         # Apply transformations
         if random.random()<self.proba_augment:  
@@ -133,10 +150,16 @@ class TripletDataset(Dataset):
             positive_tensor: torch.Tensor = self.transform_positive(positive_image)
         else:positive_tensor = transforms.ToTensor()(positive_image)
         if random.random()<self.proba_augment:  
-            negative_tensor: torch.Tensor = self.transform_negative(negative_image)
-        else:negative_tensor = transforms.ToTensor()(negative_image)
+            negative_tensor1: torch.Tensor = self.transform_negative(negative_image1)
+        else:negative_tensor1 = transforms.ToTensor()(negative_image1)
+        if random.random()<self.proba_augment:
+            negative_tensor2: torch.Tensor = self.transform_negative(negative_image2)
+        else:negative_tensor2 = transforms.ToTensor()(negative_image2)
+        if random.random()<self.proba_augment:
+            negative_tensor3: torch.Tensor = self.transform_negative(negative_image3)
+        else:negative_tensor3 = transforms.ToTensor()(negative_image3)
 
-        return (anchor_tensor, positive_tensor, negative_tensor), []
+        return (anchor_tensor, positive_tensor, negative_tensor1, negative_tensor2, negative_tensor3), []
 
     @classmethod
     def __edit_path(cls, path: str, time_series_number: int, image_number: int) -> str:
@@ -169,11 +192,13 @@ class TripletNet(nn.Module):
         super(TripletNet, self).__init__()
         self.embedding_net = embedding_net
 
-    def forward(self, x1, x2, x3):
+    def forward(self, x1, x2, x3, x4, x5):
         output1 = self.embedding_net(x1)
         output2 = self.embedding_net(x2)
         output3 = self.embedding_net(x3)
-        return output1, output2, output3
+        output4 = self.embedding_net(x4)
+        output5 = self.embedding_net(x5)
+        return output1, output2, output3, output4, output5
 
     def get_embedding(self, x):
         return self.embedding_net(x)
@@ -205,9 +230,6 @@ def freeze_model(model):
         params.requires_grad = False
 
 
-
-
-
 ### LOAD TRAIN DATA
 
 train_path = sorted(glob("Train/*.png"))
@@ -220,10 +242,10 @@ print(test[0:30])
 
 contrast_transform = transforms.Compose([
     transforms.ToTensor(),
-    transforms.ColorJitter(contrast=1),
+    transforms.ColorJitter(brightness=0.5, contrast=1, hue=0.2, saturation=0.8),
 ])
 
-triplet_train_dataset = TripletDataset(list_path=train, proba_augment=0.5, isTest=False, transform_anchor=contrast_transform, transform_positive=contrast_transform, transform_negative=contrast_transform)
+triplet_train_dataset = TripletDataset(list_path=train, proba_augment=0., isTest=False, transform_anchor=contrast_transform, transform_positive=contrast_transform, transform_negative=contrast_transform)
 triplet_test_dataset = TripletDataset(list_path=test, isTest=True)
 print (len(test), len(train))
 
@@ -254,14 +276,14 @@ model = TripletNet(embedding_net)
 if cuda:
     model.cuda()
 loss_fn = TripletLoss(margin)
-lr = 1e-4 
+lr = 5e-5 
 optimizer = optim.Adam(model.parameters(), lr=lr)
 scheduler = lr_scheduler.StepLR(optimizer, 8, gamma=0.1, last_epoch=-1)
-n_epochs = 10
+n_epochs = 5
 log_interval = 50
 
 from DeepHash.trainer import fit
 fit(triplet_train_loader, triplet_test_loader, model, loss_fn, optimizer, scheduler, n_epochs, cuda, log_interval)
 
-torch.save(model.embedding_net,'aug05contrast1_10ep_m2_lr-4_batch128_w8.pt')
+torch.save(model.embedding_net,'multi3_noaug_5ep_m2_lr5-5_batch128_w8.pt')
 

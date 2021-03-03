@@ -156,13 +156,6 @@ class TripletDataset(Dataset):
             return test_tensor
 
 
-# An identity layer to pass the fc layer in resnet
-class Identity(nn.Module):
-    def __init__(self):
-        super(Identity, self).__init__()
-
-    def forward(self, x):
-        return x
 class TripletNet(nn.Module):
     def __init__(self, embedding_net):
         super(TripletNet, self).__init__()
@@ -196,8 +189,6 @@ class MetricResnet(nn.Module):
 
 # Define model
 resnet18 = models.resnet18(pretrained=True)
-resnet18.fc = Identity()
-
 
 # Freeze all the parameters in the model
 def freeze_model(model):
@@ -248,14 +239,14 @@ model = TripletNet(embedding_net)
 if cuda:
     model.cuda()
 loss_fn = TripletLoss(margin)
-lr = 3.5e-5
+lr = 1e-5
 optimizer = optim.Adam(model.parameters(), lr=lr)
 scheduler = lr_scheduler.StepLR(optimizer, 8, gamma=0.1, last_epoch=-1)
-n_epochs = 20
+n_epochs = 10
 log_interval = 50
 
 from DeepHash.trainer import fit
 fit(triplet_train_loader, triplet_test_loader, model, loss_fn, optimizer, scheduler, n_epochs, cuda, log_interval)
 
-torch.save(model.embedding_net,'normalized_20ep_margin2_lr3.5-5_batch128_workers8.pt')
+torch.save(model.embedding_net,'noid_10ep_margin2_lr1-5_batch128_workers8.pt')
 

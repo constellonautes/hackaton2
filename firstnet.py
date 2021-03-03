@@ -222,7 +222,7 @@ contrast_transform = transforms.Compose([
     transforms.ColorJitter(contrast=1),
 ])
 
-triplet_train_dataset = TripletDataset(list_path=train, proba_augment=0.5, isTest=False, transform_anchor=contrast_transform, transform_positive=contrast_transform, transform_negative=contrast_transform)
+triplet_train_dataset = TripletDataset(list_path=train, proba_augment=0., isTest=False, transform_anchor=contrast_transform, transform_positive=contrast_transform, transform_negative=contrast_transform)
 triplet_test_dataset = TripletDataset(list_path=test, isTest=True)
 print (len(test), len(train))
 
@@ -253,8 +253,8 @@ model = TripletNet(embedding_net)
 if cuda:
     model.cuda()
 loss_fn = TripletLoss(margin)
-lr = 1e-4 
-optimizer = optim.Adam(model.parameters(), lr=lr)
+lr = 1e-5
+optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-3)
 scheduler = lr_scheduler.StepLR(optimizer, 8, gamma=0.1, last_epoch=-1)
 n_epochs = 10
 log_interval = 50
@@ -262,5 +262,5 @@ log_interval = 50
 from DeepHash.trainer import fit
 fit(triplet_train_loader, triplet_test_loader, model, loss_fn, optimizer, scheduler, n_epochs, cuda, log_interval)
 
-torch.save(model.embedding_net,'noid_10ep_margin2_lr1-5_batch128_workers8.pt')
+torch.save(model.embedding_net,'wdecaye-3_10ep_m2_lr1-5_batch128_workers8.pt')
 
